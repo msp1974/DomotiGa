@@ -509,6 +509,8 @@ Private Sub ProcessReceivedPacket(sAddress As String, aReceived As String[], aBu
       ProcessEIS2(iDeviceId, aReceived)
     Else If sDeviceTypeDesc = "KNX Device Blinds"
       ProcessEIS2(iDeviceId, aReceived)
+    Else If sDeviceTypeDesc = "KNX Device Shutter"
+      ProcessEIS2(iDeviceId, aReceived)
     Endif
   Endif
 
@@ -1484,13 +1486,13 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Private Sub ProcessDPT16(iDeviceId As Integer, aReceived As String[], sDPT As String)
 
-  Dim iValue As Float
+  Dim sValue As String
 
   Select Case aReceived[0]
     Case "80", "40" ' receive/parse
-      iValue = ConvertDPT16(aReceived, sDPT)
-      Devices.ValueUpdate(iDeviceId, 1, iValue)
-      If $bDebug Then WriteDebugLog("Processed received DPT " & sDPT & " data for device '" & Devices.FindNameForDevice(iDeviceId) & "' value = '" & iValue & "'")
+      sValue = ConvertDPT16(aReceived, sDPT)
+      Devices.ValueUpdate(iDeviceId, 1, sValue)
+      If $bDebug Then WriteDebugLog("Processed received DPT " & sDPT & " data for device '" & Devices.FindNameForDevice(iDeviceId) & "' value = '" & sValue & "'")
     Case Else
       If $bDebug Then WriteDebugLog("Unknown data '" & aReceived[0] & "' received for DPT " & sDPT & " packet!")
       Return
@@ -1538,19 +1540,19 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Private Sub ProcessDPT17(iDeviceId As Integer, aReceived As String[], sDPT As String)
 
-  Dim sValue As String
+  Dim iValue As Integer
 
   Select Case aReceived[0]
     Case "40", "80", "41", "81" ' receive/parse
-      sValue = ConvertDPT17(aReceived, sDPT)
+      iValue = ConvertDPT17(aReceived, sDPT)
     Case Else
       If $bDebug Then WriteDebugLog("Unknown data '" & aReceived[0] & "' received for DPT " & sDPT & " packet!")
       Return
   End Select
 
   ' update device
-  Devices.ValueUpdate(iDeviceId, 1, sValue)
-  If $bDebug Then WriteDebugLog("Processed received DPT " & sDPT & " data for device '" & Devices.FindNameForDevice(iDeviceId) & "' value = '" & sValue & "'")
+  Devices.ValueUpdate(iDeviceId, 1, Str(iValue))
+  If $bDebug Then WriteDebugLog("Processed received DPT " & sDPT & " data for device '" & Devices.FindNameForDevice(iDeviceId) & "' value = '" & Str(iValue) & "'")
 
 End
 
@@ -1558,7 +1560,7 @@ End
 ' DPT 17
 ' return cmd strings for DPT 17.* values
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Private Sub ConvertDPT17(aReceived As String[], sDPT As String) As String
+Private Sub ConvertDPT17(aReceived As String[], sDPT As String) As Integer
 
   Dim iScene As Integer
 
@@ -2055,8 +2057,63 @@ Public Sub SendCommand(sAddress As String, sValue As String)
         Endif
     End Select
   Else If UCase(sDeviceTypeDesc) = "KNX DEVICE BLINDS"
-    ' TODO: add blinds control
-    WriteDebugLog("Not yet supported devicetype '" & sDeviceTypeDesc & "'!")
+    
+    ' KNX Device Actuator Basic is using three different object for control (command/control/value)
+    ' Command is for movement of shutter up/down (DPT 1.008 1-Bit)
+    ' Control is for start/stop movement (1 Bit)
+    ' Value is for setting a specific position level(0 - 100%) 1-Byte DPT 5.001
+    ' If you have a blind which doesn't support start/stop specify -/-/- as middle address
+
+    bCommand[0] = &H00
+    bCommand[1] = &H27
+    bCommand[4] = &H00
+
+    Select Case sValue
+      Case "ON", "UP"
+        sAddr = CreateControlAddress(sAddress)
+        If Len(sAddr) <> 4 Then Return
+
+        bCommand[2] = Val("&H" & Left(sAddr, 2))
+        bCommand[3] = Val("&H" & Right(sAddr, 2))
+        bCommand.Add(CmdOn)
+        TransmitData(bCommand)
+      Case "OFF", "DOWN"
+        sAddr = CreateControlAddress(sAddress)
+        If Len(sAddr) <> 4 Then Return
+
+        bCommand[2] = Val("&H" & Left(sAddr, 2))
+        bCommand[3] = Val("&H" & Right(sAddr, 2))
+        bCommand.Add(CmdOff)
+        TransmitData(bCommand)
+      Case "STOP"
+        If InStr(sAddress, "-/-/-") Then
+          If $bDebug Then WriteDebugLog("Blind dummy '-/-/-' startstop address specified, skipping command.")
+          Return
+        Endif
+
+        ' extract second address and convert it to knx format
+        sAddr = CreateControlAddress(sAddress, 2)
+        If Len(sAddr) <> 4 Then Return
+
+        bCommand[2] = Val("&H" & Left(sAddr, 2))
+        bCommand[3] = Val("&H" & Right(sAddr, 2))
+        bCommand.Add(&H80)
+        TransmitData(bCommand)
+      Case Else
+        If InStr(sValue, "DIM ") Then ' DIM 0-100
+          iBrightness = Val(Replace(sValue, "DIM ", ""))
+
+          ' extract third address and convert it to knx format
+          sAddr = CreateControlAddress(sAddress, 3)
+          If Len(sAddr) <> 4 Then Return
+
+          bCommand[2] = Val("&H" & Left(sAddr, 2))
+          bCommand[3] = Val("&H" & Right(sAddr, 2))
+          bCommand.Add(&H80)
+          bCommand.Add(CInt(iBrightness * 2.55))
+          TransmitData(bCommand)
+        Endif
+    End Select
   Else
     WriteDebugLog("Unknown KNX devicetype '" & sDeviceTypeDesc & "'!")
   Endif
