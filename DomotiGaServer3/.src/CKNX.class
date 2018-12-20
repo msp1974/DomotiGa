@@ -17,6 +17,7 @@
 ' Updated by Ron Klinkien in 2014.
 ' Updated by Mark Parker - 15-12-2018 to fix status response on dimmer and shutter
 ' Updated by Mark Parker - 15-12-2018 to fix device address error
+' Updated by Mark Parker - 19-12-2018 to multipe command and status issues
 
 ' Read file called COPYING for license details.
 
