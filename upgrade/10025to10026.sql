@@ -16,5 +16,5 @@ ALTER TABLE devices ADD multivaluedim tinyint(1) DEFAULT 0 NOT NULL AFTER dimabl
 DELETE FROM version WHERE db='1.0.026';
 
 LOCK TABLES version WRITE;
-INSERT INTO version VALUES (70,'1.0.026');
+INSERT INTO version VALUES (71,'1.0.026');
 UNLOCK TABLES;
