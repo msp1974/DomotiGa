@@ -4,7 +4,10 @@
 --
 DELETE FROM devicetypes WHERE id=731;
 
-INSERT INTO devicetypes (id, name, description, protocol, addressformat) VALUES (731, 'Etekcity','Etekcity ZAP 5LX Sockets','Energenie5','A01')
+INSERT INTO devicetypes (id, name, description, protocol, addressformat) VALUES (731, 'Etekcity','Etekcity ZAP 5LX Sockets','Energenie5','A01');
+
+-- Update to support multi value dim devices
+ALTER TABLE devices ADD multivaluedim tinyint(1) DEFAULT 0 NOT NULL AFTER dimable;
 
 --
 -- Finally update to 1.0.026
