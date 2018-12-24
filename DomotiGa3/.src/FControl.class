@@ -105,7 +105,7 @@ Public Sub RefreshPage()
   Endif
 
   SelectButton($sLocation)
-
+  
   If Not Error Then
     If (rDevice.Count > 0) Then
       For Each rDevice
@@ -156,13 +156,11 @@ Public Sub RefreshPage()
             .Font = Font["Sans Serif, 7, Normal"]
           End With
           
-          'Check if multi value dimable
+           'Check if multi value dimable
           If rDevice!device_multivaluedim Then
-            
             Try iBrightness = Val(Replace(UCase(Devices.GetValueForDevice(rDevice!device_id, "value2")), "DIM ", ""))
-            Main.WriteLog("Device: " & rDevice!device_id & "--value2: " & Devices.GetValueForDevice(rDevice!device_id, "value2") & "--brightness=" & iBrightness)
           Endif
-
+        
           Select sType
             Case "X10"
               If rDevice!device_extcode = True Then
@@ -373,20 +371,11 @@ Private Sub SetDevice(sCmd As String)
 End
 
 Public Sub DimSlider_MouseUp()
-  Dim rThisDevice As Result
-  Dim iValuenum As Integer = 1
-  
-  'Check if multi value dimable
-  Try rThisDevice = Devices.FindDeviceInfoForDevice(Last.Tag)
-  
-  If rThisDevice!multivaluedim Then
-    iValuenum = 2
-  Endif
-
+ 
   If Main.bServer Then
-       Try Devices.SetDevice(Last.Tag, "Dim " & Last.Value, iValuenum)
+    Try Devices.SetDevice(Last.Tag, "Dim " & Last.Value)
   Else
-      Client.DeviceSetDevice(Last.Tag, "Dim " & Last.Value, iValuenum)
+    Client.DeviceSetDevice(Last.Tag, "Dim " & Last.Value)
   Endif
 
 End
