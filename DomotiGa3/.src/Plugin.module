@@ -844,10 +844,10 @@ Public Sub GetOnOffValue(iDeviceId As Integer, sCmd As String, Optional sDeviceN
     ' The Plugin needs to be in IsRunning state
     If isPluginRunning(sPluginName, iInstance) Then
 
-      ' Send the command to the right interface/instance
+      ' Get value from the right interface/instance
       Try sPluginCmd = GetPluginObject(sPluginName, iInstance).Interface.GetOnOffValue(sAddress, sCmd)
 
-      ' Throw an error, because we are sending a SendCommand to a plugin without the routine
+      ' Throw an error, because we are calling the subroutine from a plugin without the routine
       If Not Error Then
         Return sPluginCmd
       Else
