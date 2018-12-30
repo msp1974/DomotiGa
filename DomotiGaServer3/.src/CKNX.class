@@ -2066,6 +2066,39 @@ Catch
 
 End
 
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'Return on/off command values
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Public Sub GetOnOffValue(sAddress As String, sCmd As String) As String
+  
+  Dim sDeviceTypeDesc As String
+  Dim sNewCmd As String
+  
+  sDeviceTypeDesc = Devices.FindDeviceTypeDescriptionForDeviceId(Devices.Find(Instance, sAddress, InterfaceId))
+  
+  'Add here use of DPT1.xx and 2.xx conversions above
+
+  Select Case UCase(sDeviceTypeDesc)
+    Case "KNX DEVICE SHUTTER"
+      If UCase(sCmd) = "ON" Then
+        sNewCmd = "Down"
+      Else
+        sNewCmd = "Up"
+      Endif
+    Case "KNX DEVICE BLINDS"
+      If UCase(sCmd) = "ON" Then
+        sNewCmd = "Closed"
+      Else
+        sNewCmd = "Open"
+      Endif
+  Case Else
+    sNewCmd = sCmd
+  End Select
+  
+  Return sNewCmd
+  
+End
+
 Public Function Addr2Str(sAddress As String, bGroupAddress As Boolean) As String
 
   If bGroupAddress Then

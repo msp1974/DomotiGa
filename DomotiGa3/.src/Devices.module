@@ -1827,21 +1827,35 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' return on/off/dim icon name related to value
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Public Sub GetStatusIcon(sValue As String, sOnIcon As String, sOffIcon As String, sDimIcon As String) As String
+Public Sub GetStatusIcon(iDeviceId As Integer, sValue As String, sOnIcon As String, sOffIcon As String, sDimIcon As String) As String
 
   Dim aValue As String[]
+  Dim sOnValues As String[] = ["ON", "OPEN", "MOTION", "UP", "AWAKE", "ONLINE", "LIGHT", "ALARM"]
+  Dim sDeviceOnValue As String
+  Dim bDeviceOn As Boolean
 
   ' split command
   aValue = Split(UCase(sValue), " ")
 
   If Not IsNull(sOnIcon) Or Not IsNull(sOffIcon) Then
     If aValue.Count = 1 Then
-      Select Case UCase(aValue[0])
-        Case "ON", "OPEN", "MOTION", "AWAKE", "ONLINE", "LIGHT", "UP", "ALARM"
-          Return sOnIcon
-        Case Else
-          Return sOffIcon
-      End Select
+      sValue = UCase(sValue)
+      bDeviceOn = False
+          
+      'Get On value for device
+      Try sDeviceOnValue = UCase(Plugin.GetOnOffValue(iDeviceId, "On"))
+      
+      If Not Error Then
+        If sValue = sDeviceOnValue Then bDeviceOn = True
+      Else
+        If sOnValues.Exist(sValue) Then bDeviceOn = True
+      Endif
+
+      If bDeviceOn Then
+        Return sOnIcon
+      Else
+        Return sOffIcon
+      Endif
     Else If aValue.Count > 1 Then
       If aValue[0] = "DIM" Then
         If Len(sDimIcon) Then Return sDimIcon
@@ -1922,9 +1936,17 @@ End
 ' toggle device state of device with iDeviceId
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Public Sub ToggleDeviceValue(iDeviceId As Integer) As String
-
+  
+  Dim sDeviceOnValue As String = Plugin.GetOnOffValue(iDeviceId, "On")
+  
   If CheckIfDeviceExists(iDeviceId)
-    Return Toggle(GetCurrentValueForDevice(iDeviceId, 1))
+    If GetCurrentValueForDevice(iDeviceId, 1) = sDeviceOnValue Then
+      'Device is on
+      Return Plugin.GetOnOffValue(iDeviceId, "Off")
+    Else
+      'Device is off
+      Return Plugin.GetOnOffValue(iDeviceId, "On")
+    Endif
   Else
     Return ""
   Endif

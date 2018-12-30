@@ -1957,7 +1957,7 @@ Private Sub Call_Device_List(cData As JSONCollection)
 
       ' Overrule the icon value if we have valuenum 1
       If rResultValues!valuenum = 1 Then
-        Try cDevice.Add(Devices.GetStatusIcon(rResultValues!value, rResult!onicon, rResult!officon, rResult!dimicon), "icon")
+        Try cDevice.Add(Devices.GetStatusIcon(rResult!id, rResultValues!value, rResult!onicon, rResult!officon, rResult!dimicon), "icon")
       Endif
     Next
 
@@ -2033,7 +2033,7 @@ Private Sub Call_Device_Get(cData As JSONCollection)
 
       ' Overrule the icon value if we have valuenum 1
       If rResultValues!valuenum = 1 Then
-        cValue.Add(Devices.GetStatusIcon(rResultValues!value, rResult!onicon, rResult!officon, rResult!dimicon), "icon")
+        cValue.Add(Devices.GetStatusIcon(rResult!id, rResultValues!value, rResult!onicon, rResult!officon, rResult!dimicon), "icon")
       Endif
 
       aValueValue.Add(cValueValue)

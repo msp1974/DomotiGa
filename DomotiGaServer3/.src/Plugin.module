@@ -826,6 +826,45 @@ Public Sub SendCommand(sPluginName As String, iInstance As Integer, sAddress As 
 End
 
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Get plugin on/off value
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Public Sub GetOnOffValue(iDeviceId As Integer, sCmd As String, Optional sDeviceName As String) As String
+  Dim sPluginCmd As String = ""
+  Dim sPluginName As String
+  Dim iInstance As Integer = 1
+  Dim sAddress As String
+  
+  sPluginName = Devices.FindTypeForDevice(iDeviceId)
+  iInstance = Devices.FindInstanceForDevice(iDeviceId)
+  sAddress = Devices.FindAddressForDevice(iDeviceId)
+  
+  ' The Plugin needs to be enabled
+  If isPluginEnabled(sPluginName, iInstance) Then
+
+    ' The Plugin needs to be in IsRunning state
+    If isPluginRunning(sPluginName, iInstance) Then
+
+      ' Send the command to the right interface/instance
+      Try sPluginCmd = GetPluginObject(sPluginName, iInstance).Interface.GetOnOffValue(sAddress, sCmd)
+
+      ' Throw an error, because we are sending a SendCommand to a plugin without the routine
+      If Not Error Then
+        Return sPluginCmd
+      Else
+        Main.WriteDebugLog("[Plugin] INFO: '" & sPluginName & "' doesn't have a 'GetOnOffValue' function, using standard on/off values.")
+        Return sCmd
+      Endif
+    Else
+      Return sCmd
+    Endif
+
+  Else
+    Return sCmd
+  Endif
+  
+End
+
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' Get the configuration from the settings table
 ' If iRow = -1 give all the rows back (except row=0, this is default)
 ' If iRow >= 0 give only the requested row back

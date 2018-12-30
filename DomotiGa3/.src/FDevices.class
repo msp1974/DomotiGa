@@ -162,7 +162,7 @@ Public Sub GetDeviceList()
 
   For iCount = 0 To rResult.Max
     gvDevices[iCount, 0].Text = rResult!id
-    gvDevices[iCount, 1].Picture = Picture[Main.sBaseDir &/ "icons" &/ Devices.GetStatusIcon(Devices.GetValueForDevice(rResult!id, 1), rResult!onicon, rResult!officon, rResult!dimicon)]
+    gvDevices[iCount, 1].Picture = Picture[Main.sBaseDir &/ "icons" &/ Devices.GetStatusIcon(rResult!id, Devices.GetValueForDevice(rResult!id, 1), rResult!onicon, rResult!officon, rResult!dimicon)]
     gvDevices[iCount, 2].Text = rResult!name
 
     ' Dynamically re-size name if form hasn't be opened before

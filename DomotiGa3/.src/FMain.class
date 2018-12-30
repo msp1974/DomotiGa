@@ -765,7 +765,7 @@ Public Sub DisplaySensors(sGroup As String, oPanel As Object, sGroup2 As String)
               If rDeviceValue!valuenum == 1 Then
                 hMovieBox = New MovieBox(hPanel) As "Icon"
                 With hMovieBox
-                Try .Path = Main.sBaseDir &/ "icons" &/ Devices.GetStatusIcon(rDeviceValue!value, rDevice!device_onicon, rDevice!device_officon, rDevice!device_dimicon)
+                Try .Path = Main.sBaseDir &/ "icons" &/ Devices.GetStatusIcon(rDevice!device_id, rDeviceValue!value, rDevice!device_onicon, rDevice!device_officon, rDevice!device_dimicon)
                 .Height = 32
                 .Width = 32
                 .X = 10
@@ -902,7 +902,7 @@ Public Sub DisplaySensorsforLocation(iLocationId As Integer, oPanel As Object)
       ' device icon
       hMovieBox = New MovieBox(hPanel) As "Icon"
       With hMovieBox
-        .Path = Main.sBaseDir &/ "icons" &/ Devices.GetStatusIcon(rDevice!device_value_value, rDevice!device_onicon, rDevice!device_officon, rDevice!device_dimicon)
+        .Path = Main.sBaseDir &/ "icons" &/ Devices.GetStatusIcon(rDevice!device_id, rDevice!device_value_value, rDevice!device_onicon, rDevice!device_officon, rDevice!device_dimicon)
         .Height = 32
         .Width = 20
         .X = 10

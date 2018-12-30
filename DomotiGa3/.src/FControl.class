@@ -95,6 +95,10 @@ Public Sub RefreshPage()
   Dim iBrightness, iColor As Integer
   Dim oIcon As Object
   Dim hDimBox As HBox
+  Dim sOnValues As String[] = ["ON", "OPEN", "MOTION", "UP", "AWAKE", "ONLINE", "LIGHT", "ALARM"]
+  Dim sDeviceOnValue As String = ""
+  Dim bDeviceOn As Boolean = False
+
 
   ' fetch location name
   rLocation = Main.hDB.Exec("SELECT * FROM locations WHERE name LIKE &1", $sLocation)
@@ -109,10 +113,27 @@ Public Sub RefreshPage()
   If Not Error Then
     If (rDevice.Count > 0) Then
       For Each rDevice
+        
+        'Support custom plugin device on/off values
+        If rDevice!device_dimable Or rDevice!device_switchable Then
+          sValue = UCase(rDevice!device_value_value)
+          sType = Devices.FindTypeForDevice(rDevice!device_id)
+          bDeviceOn = False
+          
+          'Get On value for device
+          Try sDeviceOnValue = UCase(Plugin.GetOnOffValue(rDevice!device_id, "On"))
+          
+          If Not Error Then
+            If sValue = sDeviceOnValue Then bDeviceOn = True
+          Else
+            If sOnValues.Exist(sValue) Then bDeviceOn = True
+          Endif
+        Endif
+        
         If rDevice!device_dimable Then
           sValue = UCase(rDevice!device_value_value)
           sType = Devices.FindTypeForDevice(rDevice!device_id)
-          If sValue = "ON" Or sValue = "OPEN" Or sValue = "MOTION" Or sValue = "UP" Or sValue = "AWAKE" Or sValue = "ONLINE" Or sValue = "LIGHT" Or sValue = "ALARM" Then
+          If bDeviceOn Then
             hButton = New Button(VPanel1) As "SwitchButton_Off"
             If rDevice!device_onicon <> "" Then
               Try oIcon = Picture[Main.sBaseDir &/ "icons/" & rDevice!device_onicon]
@@ -264,7 +285,7 @@ Public Sub RefreshPage()
 
         If rDevice!device_switchable Then
           sValue = UCase(rDevice!device_value_value)
-          If sValue = "ON" Or sValue = "OPEN" Or sValue = "MOTION" Or sValue = "UP" Or sValue = "AWAKE" Then
+          If bDeviceOn Then
             hButton = New Button(VPanel1) As "SwitchButton_Off"
             If rDevice!device_onicon <> "" Then
               Try oIcon = Picture[Main.sBaseDir &/ "icons/" & rDevice!device_onicon]
@@ -356,6 +377,8 @@ Public Sub PopulateButtons()
 End
 
 Private Sub SetDevice(sCmd As String)
+
+  Try sCmd = Plugin.GetOnOffValue(Last.Tag, sCmd)
 
   If Main.bServer Then
     Try Devices.SetDevice(Last.Tag, sCmd)
