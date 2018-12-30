@@ -2072,29 +2072,42 @@ End
 Public Sub GetOnOffValue(sAddress As String, sCmd As String) As String
   
   Dim sDeviceTypeDesc As String
+  Dim aDeviceTypeDesc As String[]
   Dim sNewCmd As String
   
   sDeviceTypeDesc = Devices.FindDeviceTypeDescriptionForDeviceId(Devices.Find(Instance, sAddress, InterfaceId))
+
+  aDeviceTypeDesc = Scan(sDeviceTypeDesc, "DPT *.*")
+  If aDeviceTypeDesc.Count = 2 Then
+    sDeviceTypeDesc = Trim(Replace(sDeviceTypeDesc, "DPT ", ""))
+    Select aDeviceTypeDesc[0]
+      Case "1"
+        If UCase(scmd) = "ON" Then
+          sNewCmd = ConvertDPT1([1], sDeviceTypeDesc)
+        Else
+          sNewCmd = ConvertDPT1([0], sDeviceTypeDesc)
+        Endif
+    End Select
   
   'Add here use of DPT1.xx and 2.xx conversions above
-
-  Select Case UCase(sDeviceTypeDesc)
-    Case "KNX DEVICE SHUTTER"
-      If UCase(sCmd) = "ON" Then
-        sNewCmd = "Down"
-      Else
-        sNewCmd = "Up"
-      Endif
-    Case "KNX DEVICE BLINDS"
-      If UCase(sCmd) = "ON" Then
-        sNewCmd = "Closed"
-      Else
-        sNewCmd = "Open"
-      Endif
-  Case Else
-    sNewCmd = sCmd
-  End Select
-  
+  Else
+    Select Case UCase(sDeviceTypeDesc)
+      Case "KNX DEVICE SHUTTER"
+        If UCase(sCmd) = "ON" Then
+          sNewCmd = "Down"
+        Else
+          sNewCmd = "Up"
+        Endif
+      Case "KNX DEVICE BLINDS"
+        If UCase(sCmd) = "ON" Then
+          sNewCmd = "Closed"
+        Else
+          sNewCmd = "Open"
+        Endif
+    Case Else
+      sNewCmd = sCmd
+    End Select
+  Endif  
   Return sNewCmd
   
 End
