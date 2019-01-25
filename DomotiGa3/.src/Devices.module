@@ -934,11 +934,11 @@ Public Sub ValueUpdate(iDeviceId As Integer, iValueNum As Integer, vValue As Var
     If InStr(LCase(vValue), "dim") Then 
       iValueNum = 2 
       'Set on/off in value 1 if dim setting
-      If LCase(vValue) = "dim 0" Then 
-        ValueUpdate(iDeviceId, 1, "Off")
-      Else
-        ValueUpdate(iDeviceId, 1, "On")
-      Endif
+      ' If LCase(vValue) = "dim 0" Then 
+      '   ValueUpdate(iDeviceId, 1, "Off")
+      ' Else
+      '   ValueUpdate(iDeviceId, 1, "On")
+      ' Endif
     Endif
   Else
     If vValue = "Dim 100" Then vValue = "On"

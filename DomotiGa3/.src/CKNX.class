@@ -51,7 +51,7 @@ Public hMySocket As CSocket
 
 Public tKNX As Timer
 
-Private $aBuffer As New Byte[512]
+Private $aBuffer As New Byte[]
 Private $iRead As Integer = 0
 
 Private Const CmdOn As Byte = &H81
@@ -338,7 +338,7 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Private Sub ProcessReceivedChar(bTemp As Byte)
 
-  Dim iCnt As Integer
+  Dim iCnt, i As Integer
   Dim sDevice, sAddress As String
   Dim aReceived As New String[0]
 
@@ -349,6 +349,7 @@ Private Sub ProcessReceivedChar(bTemp As Byte)
 
   ' Increment read byte counter
   Inc $iRead
+  $aBuffer.Resize($iRead)
 
   ' First byte should always be '00'
   If $iRead = 1 Then
@@ -414,6 +415,10 @@ Private Sub ProcessReceivedChar(bTemp As Byte)
       Case Else
         If $bDebug Then WriteDebugLog("Received unknown packet type '" & Hex$($aBuffer[3]) & "'")
   End Select
+  
+   'Clear $abuffer to fix bug of holding onto dim value
+   $aBuffer = New Byte[]
+  
 
 Catch
   WriteDebugLog("ERROR: '" & Error.Text & "' at '" & Error.Where & "'")
@@ -429,7 +434,7 @@ Private Sub ProcessReceivedPacket(sAddress As String, aReceived As String[], aBu
   Dim sDeviceTypeDesc As String
   Dim aDeviceTypeDesc As String[]
   Dim iCnt As Integer
-
+  
   If iDeviceId Then
     sDeviceTypeDesc = Devices.FindDeviceTypeDescriptionForDeviceId(iDeviceId)
 
@@ -505,10 +510,8 @@ Private Sub ProcessReceivedPacket(sAddress As String, aReceived As String[], aBu
           Next
           Main.WriteDebugLogChars("\n", True)
       End Select
-    Else If sDeviceTypeDesc = "KNX Device Dimmer"
-      ProcessEIS2(iDeviceId, aReceived)
-    Else If sDeviceTypeDesc = "KNX Device Blinds"
-      ProcessEIS2(iDeviceId, aReceived)
+    Else If sDeviceTypeDesc = "KNX Device Dimmer" Or sDeviceTypeDesc = "KNX Device Blinds" Or sDeviceTypeDesc = "KNX Device Shutter"
+      ProcessSpecialDevice(iDeviceId, aReceived, sDeviceTypeDesc)
     Endif
   Endif
 
@@ -1762,18 +1765,37 @@ Catch
 End
 
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-' handle received commands for EIS2 devices (dim)
+' handle received commands for special devices (dimmer, blinds, shutters)
 ' address format is 0/1/2|0/1/3|0/1/4
 ' first address is used for on/off, second start/stop, third dim value
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Private Sub ProcessEIS2(iDeviceId As Integer, sReceived As String[])
+Private Sub ProcessSpecialDevice(iDeviceId As Integer, aReceived As String[], sDeviceTypeDesc As String)
 
   Dim iPercentage As Integer
+  Dim rDevice As Result
+  Dim bMultiValueDim As Boolean = False
+  Dim sDPT As String
+  
+  'Check if device is set for multi value dim
+   Try rDevice = Devices.FindDeviceInfoForDevice(iDeviceId)
+   Try bMultiValueDim = rDevice!multivaluedim
+   
+  'Set On/Off values
+  Select Case sDeviceTypeDesc
+    Case "KNX Device Dimmer"
+      sDPT = "1.001"
+    Case "KNX Device Blinds"
+      sDPT = "1.008"
+    Case "KNX Device Shutter"
+      sDPT = "1.009"
+  End Select
 
-  Select Case sReceived[0]
+
+  Select Case aReceived[0]
+    'TODO: Amend to handle multi value dimming
     Case "40"
       Devices.ValueUpdate(iDeviceId, 1, "Off")
-      iPercentage = Round(Val("&H" & sReceived[1]) / 255 * 100)
+      iPercentage = ConvertDPT5(aReceived, "5.001")
       If iPercentage = 0 Then
         Devices.ValueUpdate(iDeviceId, 1, "Off")
       Else If iPercentage = 100 Then
@@ -1781,36 +1803,52 @@ Private Sub ProcessEIS2(iDeviceId As Integer, sReceived As String[])
       Else
         Devices.ValueUpdate(iDeviceId, 1, "Dim " & CStr(iPercentage))
       Endif
+      
+    'TODO: Amend to handle multi value dimming  
     Case "41"
       If $bDebug Then WriteDebugLog("EIS2 packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' Value = 'On'")
         Devices.ValueUpdate(iDeviceId, 1, "On")
-        iPercentage = Round(Val("&H" & sReceived[1]) / 255 * 100)
+        iPercentage = ConvertDPT5(aReceived, "5.001")
         If iPercentage <> "0" And iPercentage <> "100" Then
           If $bDebug Then WriteDebugLog("EIS2 packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' Value = 'Dim " & CStr(iPercentage) & "%'")
           Devices.ValueUpdate(iDeviceId, 1, "Dim " & CStr(iPercentage))
       Endif
+      
     Case "80"
-      If sReceived[1] <> "00" Then
-        iPercentage = Round(Val("&H" & sReceived[1]) / 255 * 100)
-        If iPercentage = 0 Then
-          Devices.ValueUpdate(iDeviceId, 1, "Off")
-        Else If iPercentage = 100 Then
-          Devices.ValueUpdate(iDeviceId, 1, "On")
+      If aReceived.Length >= 2 Then
+        iPercentage = ConvertDPT5(aReceived, "5.001")
+      
+        If bMultiValueDim Then
+            'Dim
+            Devices.ValueUpdate(iDeviceId, 1, "Dim " & CStr(iPercentage))
+            If $bDebug Then WriteDebugLog(sDeviceTypeDesc & " packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' (DPT " & sDPT & ") Value = 'Dim " & CStr(iPercentage) & "%'")
         Else
-          Devices.ValueUpdate(iDeviceId, 1, "Dim " & CStr(iPercentage))
+          If aReceived[1] <> "00" Then
+            'Dim
+            Devices.ValueUpdate(iDeviceId, 1, "Dim " & CStr(iPercentage))
+            If $bDebug Then WriteDebugLog(sDeviceTypeDesc & " packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' (DPT " & sDPT & ") Value = 'Dim " & CStr(iPercentage) & "%'")
+          Else
+            Devices.ValueUpdate(iDeviceId, 1, ConvertDPT1(aReceived, sDPT))
+            If $bDebug Then WriteDebugLog(sDeviceTypeDesc & " packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' (DPT " & sDPT & ") Value = '" & ConvertDPT1(aReceived, sDPT) & "'")
+          Endif
         Endif
-        If $bDebug Then WriteDebugLog("EIS2 packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' Value = 'Dim " & CStr(iPercentage) & "%'")
+        
       Else
-        If $bDebug Then WriteDebugLog("EIS2 packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' Value = 'Off'")
-        Devices.ValueUpdate(iDeviceId, 1, "Off")
+        'Off/Up/Open
+        Devices.ValueUpdate(iDeviceId, 1, ConvertDPT1(aReceived, sDPT))
+        If $bDebug Then WriteDebugLog(sDeviceTypeDesc & " packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' (DPT " & sDPT & ") Value = '" & ConvertDPT1(aReceived, sDPT) & "'")
       Endif
+
     Case "81"
-      If $bDebug Then WriteDebugLog("EIS2 packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' Value = 'On'")
-      Devices.ValueUpdate(iDeviceId, 1, "On")
+      'On/Down/Close
+      If $bDebug Then WriteDebugLog(sDeviceTypeDesc & " packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' (DPT " & sDPT & ") Value = '" & ConvertDPT1(aReceived, sDPT) & "'")
+      Devices.ValueUpdate(iDeviceId, 1, ConvertDPT1(aReceived, sDPT))
+      
     Case "89"
-      If $bDebug Then WriteDebugLog("EIS2 packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' Value = 'Dim'")
+      If $bDebug Then WriteDebugLog(sDeviceTypeDesc & " packet for device '" & Devices.FindNameForDevice(iDeviceId) & "' (DPT " & sDPT & ") Value = 'Dim'")
+      
     Case Else
-      If $bDebug Then WriteDebugLog("Unknown value '" & sReceived[0] & "' received for EIS2 type data packet!")
+      If $bDebug Then WriteDebugLog("Unknown value '" & aReceived[0] & "' received for " & sDeviceTypeDesc & " type data packet!")
       Return
   End Select
 
@@ -1894,47 +1932,46 @@ Public Sub SendCommand(sAddress As String, sValue As String)
 
   aDeviceTypeDesc = Scan(sDeviceTypeDesc, "DPT *.*")
   If aDeviceTypeDesc.Count = 2 Then
+    
+     ' extract first address and convert it to knx format
+     sAddr = CreateControlAddress(sAddress)
+        ' check if we have 2 bytes
+        If Len(sAddr) <> 4 Then Return
+
+        bCommand[0] = &H00
+        bCommand[1] = &H27
+        bCommand[2] = Val("&H" & Left(sAddr, 2))
+        bCommand[3] = Val("&H" & Right(sAddr, 2))
+        bCommand[4] = &H00
+        
     Select aDeviceTypeDesc[0]
       Case "1"
         ' DPT 1.* 1-Bit
         ' 0/1/2[|0/1/3|...] control and feedback address(es)
-
-        ' extract first address and convert it to knx format
-        sAddr = CreateControlAddress(sAddress)
-        ' check if we have 2 bytes
-        If Len(sAddr) <> 4 Then Return
-
-        bCommand[0] = &H00
-        bCommand[1] = &H27
-        bCommand[2] = Val("&H" & Left(sAddr, 2))
-        bCommand[3] = Val("&H" & Right(sAddr, 2))
-        bCommand[4] = &H00
         Select Case sValue
-          Case "OFF", "DISABLE", "NO ALARM", "LOW", "DECREASE", "UP", "STOP", "INACTIVE", "TRIGGER 0", "SCENE A", "COOLING"
+          Case "OFF", "DISABLE", "NO ALARM", "LOW", "DECREASE", "UP", "STOP", "INACTIVE", "TRIGGER 0", "SCENE A", "COOLING", "OPEN"
             bCommand.Add(CmdOff)
             TransmitData(bCommand)
-          Case "ON", "ENABLE", "ALARM", "HIGH", "INCREASE", "DOWN", "START", "ACTIVE", "TRIGGER 1", "SCENE B", "HEATING"
+          Case "ON", "ENABLE", "ALARM", "HIGH", "INCREASE", "DOWN", "START", "ACTIVE", "TRIGGER 1", "SCENE B", "HEATING", "CLOSED"
             bCommand.Add(CmdOn)
             TransmitData(bCommand)
         End Select
+        
+      Case "5"
+        ' DPT 5.* 1-Byte
+        ' 0/1/2[|0/1/3|...] control and feedback address(es)
+        bCommand.Add(&H80)
+        bCommand.Add(CInt(iBrightness * 2.55))
+        TransmitData(bCommand)
+        
       Case "9"
         ' DPT 9.* 2 Byte Float E Exponent(0..15)
         ' 0/1/2[|0/1/3|...] control and feedback address(es)
-
-        ' extract first address and convert it to knx format
-        sAddr = CreateControlAddress(sAddress)
-        ' check if we have 2 bytes
-        If Len(sAddr) <> 4 Then Return
-
-        bCommand[0] = &H00
-        bCommand[1] = &H27
-        bCommand[2] = Val("&H" & Left(sAddr, 2))
-        bCommand[3] = Val("&H" & Right(sAddr, 2))
-        bCommand[4] = &H00
         bData = EncodeDPT9(sValue, Right(sDeviceTypeDesc, Len(sDeviceTypeDesc) - 4))
         bCommand.Add(bData[0])
         bCommand.Add(bData[1])
         TransmitData(bCommand)
+      
       Case Else
         WriteDebugLog("Control of " & sDeviceTypeDesc & " type not implemented yet, please report.")
     End Select
@@ -1996,7 +2033,7 @@ Public Sub SendCommand(sAddress As String, sValue As String)
           TransmitData(bCommand)
         Endif
     End Select
-  Else If UCase(sDeviceTypeDesc) = "KNX DEVICE SHUTTER"
+  Else If UCase(sDeviceTypeDesc) = "KNX DEVICE SHUTTER" Or UCase(sDeviceTypeDesc) = "KNX DEVICE BLINDS"
 
     ' KNX Device Actuator Basic is using three different object for control (command/control/value)
     ' Command is for movement of shutter up/down (DPT 1.008 1-Bit)
@@ -2009,7 +2046,7 @@ Public Sub SendCommand(sAddress As String, sValue As String)
     bCommand[4] = &H00
 
     Select Case sValue
-      Case "ON", "UP"
+      Case "ON", "DOWN", "CLOSED"
         sAddr = CreateControlAddress(sAddress)
         If Len(sAddr) <> 4 Then Return
 
@@ -2017,7 +2054,7 @@ Public Sub SendCommand(sAddress As String, sValue As String)
         bCommand[3] = Val("&H" & Right(sAddr, 2))
         bCommand.Add(CmdOn)
         TransmitData(bCommand)
-      Case "OFF", "DOWN"
+      Case "OFF", "UP", "OPEN"
         sAddr = CreateControlAddress(sAddress)
         If Len(sAddr) <> 4 Then Return
 
@@ -2054,9 +2091,6 @@ Public Sub SendCommand(sAddress As String, sValue As String)
           TransmitData(bCommand)
         Endif
     End Select
-  Else If UCase(sDeviceTypeDesc) = "KNX DEVICE BLINDS"
-    ' TODO: add blinds control
-    WriteDebugLog("Not yet supported devicetype '" & sDeviceTypeDesc & "'!")
   Else
     WriteDebugLog("Unknown KNX devicetype '" & sDeviceTypeDesc & "'!")
   Endif
