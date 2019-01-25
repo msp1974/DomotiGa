@@ -491,7 +491,7 @@ Private Sub ProcessReceivedPacket(sAddress As String, aReceived As String[], aBu
           ProcessDPT16(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
 
         Case "17" ' DPT 17.001 1-Byte scene number, raw
-          ProcessDPT18(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
+          ProcessDPT17(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
 
         Case "18" ' DPT 18.001 1-Byte scene control, raw
           ProcessDPT18(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
@@ -1929,7 +1929,7 @@ Public Sub SendCommand(sAddress As String, sValue As String)
 
   sValue = UCase(sValue)
   sDeviceTypeDesc = Devices.FindDeviceTypeDescriptionForDeviceId(Devices.Find(Instance, sAddress, InterfaceId))
-
+  
   aDeviceTypeDesc = Scan(sDeviceTypeDesc, "DPT *.*")
   If aDeviceTypeDesc.Count = 2 Then
     
@@ -1961,7 +1961,7 @@ Public Sub SendCommand(sAddress As String, sValue As String)
         ' DPT 5.* 1-Byte
         ' 0/1/2[|0/1/3|...] control and feedback address(es)
         bCommand.Add(&H80)
-        bCommand.Add(CInt(iBrightness * 2.55))
+        bCommand.Add(CInt(Val(Replace(sValue, "DIM ", "")) * 2.55))
         TransmitData(bCommand)
         
       Case "9"
