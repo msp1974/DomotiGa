@@ -1896,10 +1896,10 @@ Private Sub Call_Device_List(cData As JSONCollection)
   ' If we didn't get a field list, use the defaults
   If cData["fields"].Count = 0 Then
     If InStr(sList, "ext") Then
-      cData["fields"] = ["device_id", "name", "icon", "lastseen", "enabled", "hide", "dimable", "switchable", "batterystatus", "location_id", "locationname", "floorplan_id", "floorplanname", "floorplanimage", "x", "y", "devicetype_id", "devicetypename", "interface_id", "interfacename", "groups"]
+      cData["fields"] = ["device_id", "name", "icon", "lastseen", "enabled", "hide", "dimable", "multivaluedim", "switchable", "batterystatus", "location_id", "locationname", "floorplan_id", "floorplanname", "floorplanimage", "x", "y", "devicetype_id", "devicetypename", "interface_id", "interfacename", "groups"]
       cData["fields_values"] = New String[]
     Else
-      cData["fields"] = ["device_id", "name", "icon", "lastseen", "enabled", "hide", "dimable", "switchable", "batterystatus", "location_id", "locationname"]
+      cData["fields"] = ["device_id", "name", "icon", "lastseen", "enabled", "hide", "dimable", "multivaluedim", "switchable", "batterystatus", "location_id", "locationname"]
       cData["fields_values"] = ["valuenum", "value", "units"]
     Endif
   Else
