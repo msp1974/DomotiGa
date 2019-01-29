@@ -1572,7 +1572,7 @@ Private Sub ConvertDPT17(aReceived As String[], sDPT As String) As String
       If $bDebug Then WriteDebugLog("Unknown DPT '" & sDPT & "' received for DPT 17.* packet!")
       iScene = 0
   End Select
-  Return iScene
+  Return iScene + 1
 
 Catch
   WriteDebugLog("ERROR: '" & Error.Text & "' at '" & Error.Where & "'!")
