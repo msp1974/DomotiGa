@@ -78,7 +78,7 @@ Public Sub SetDevice(iDeviceId As Integer, sValue As String, Optional iValueNum 
 
   Dim iInstance As Integer
   Dim sPluginName, sPluginType, sAddress, sSpeakText, sDeviceName As String
-  Dim rDevice, rPlugin As Result
+  Dim rDevice, rPlugin, rDeviceValue As Result
 
   If Not CheckIfDeviceExists(iDeviceId) Then Return False
 
@@ -102,6 +102,9 @@ Public Sub SetDevice(iDeviceId As Integer, sValue As String, Optional iValueNum 
 
   ' We can and should optimize it, but we get deviceinfo record now
   rDevice = FindDeviceInfoForDevice(iDeviceId)
+  
+  ' Get value info for ivaluenum
+  rDeviceValue = GetValues(["device_id": iDeviceId, "valuenum": [iValueNum]])
 
   ' toggle if needed
   If LCase(sValue) = "toggle" Then sValue = Toggle(GetCurrentValueForDevice(iDeviceId, 1))
@@ -127,7 +130,7 @@ Public Sub SetDevice(iDeviceId As Integer, sValue As String, Optional iValueNum 
     End Select
   Else
     ' Only do the SendCommand if it valueid and the device is switchable/dimmable
-    If (iValueNum = 1 Or (rDevice!multivaluedim And iValueNum = 2)) And (rDevice!switchable Or rDevice!dimable) Then
+    If ((iValueNum = 1 Or (rDevice!multivaluedim And iValueNum = 2)) And (rDevice!switchable Or rDevice!dimable)) Or rDeviceValue!control Then
       If Main.bDevicesDebug Then WriteDebugLog("Device '" & sDeviceName & "' is set as switchable or dimable, so call SendCommand() of plugin.")
       ' call plugin's sendcommand routine (if any)
       If Plugin.SendCommand(sPluginName, iInstance, sAddress, sValue, sDeviceName) Then

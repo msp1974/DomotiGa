@@ -498,6 +498,9 @@ Private Sub ProcessReceivedPacket(sAddress As String, aReceived As String[], aBu
 
         Case "19" ' DPT 19.001 8-Byte datetime, raw
           ProcessDPT19(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
+          
+        Case "20" ' DPT 20.102 1-Byte HVAC control, raw
+          ProcessDPT20(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
 
         Case "232" ' DPT 232.600 3-Byte rgb, raw
           ProcessDPT232(iDeviceId, aReceived, aDeviceTypeDesc[0] & "." & aDeviceTypeDesc[1])
@@ -585,6 +588,9 @@ Public Sub ProcessDPTs(aReceived As String[], sDPT As String) As String
 
       Case "19" ' DPT 19.001 8-Byte datetime, raw
         Return ConvertDPT19(aReceived, sDPT)
+      
+      Case "20" ' DPT 20.102 1-Byte HVAC Mode
+        Return ConvertDPT20(aReceived, sDPT)
 
       Case "232" ' DPT 232.600 3-Byte rgb, raw
         Return ConvertDPT232(aReceived, sDPT)
@@ -707,6 +713,38 @@ Private Sub EncodeDPT9(sValue As Variant, sDPT As String) As Byte[]
       bData[0] = Lsr(i, 8)
       bData[1] = i And &HFF
 
+      Return bData
+
+    Case Else
+      Return Null
+
+  End Select
+
+End
+
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' encode DPT 20.1** value, 1 Byte
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Private Sub EncodeDPT20(sValue As Variant, sDPT As String) As Byte
+
+  Dim bData As Byte
+
+  Select Case sDPT
+    Case "20.102" 'HVAC Mode
+      Select Case sValue
+        Case "AUTO"
+          bData = 0
+        Case "COMFORT"
+          bData = 1
+        Case "STANDBY"
+          bData = 2
+        Case "ECONOMY"
+          bData = 3
+        Case "BUILDING PROTECTION"
+          bData = 4
+        Case Else
+          If $bDebug Then WriteDebugLog("Unknown value '" & sValue & "' set for DPT " & sDPT)
+      End Select
       Return bData
 
     Case Else
@@ -1010,9 +1048,9 @@ Private Sub ConvertDPT5(aReceived As String[], sDPT As String) As Integer
 
   Select Case sDPT
     Case "5.xxx", "5.001" ' Relative Value (0..100%)
-      iValue = Val("&H" & aReceived[1]) * 100 / 255
+      iValue = Int(Round(Val("&H" & aReceived[1]) * 100 / 255, 0))
     Case "5.003" ' Angle (0..360°)
-      iValue = Val("&H" & aReceived[1]) * 360 / 255
+      iValue = Int(Round(Val("&H" & aReceived[1]) * 360 / 255))
     Case "5.004" ' Decimal (0..255)
       iValue = Val("&H" & aReceived[1])
     Case "5.005", "5.006", "5.010" ' Decimal (0..255)
@@ -1718,6 +1756,62 @@ Catch
 
 End
 
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' process received data for DPT 20.xxx 1-Byte status number
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Private Sub ProcessDPT20(iDeviceId As Integer, aReceived As String[], sDPT As String)
+
+  Dim sValue As String
+
+  Select Case aReceived[0]
+    Case "40", "80", "41", "81" ' receive/parse
+      sValue = ConvertDPT20(aReceived, sDPT)
+    Case Else
+      If $bDebug Then WriteDebugLog("Unknown data '" & aReceived[0] & "' received for DPT " & sDPT & " packet!")
+      Return
+  End Select
+
+  ' update device
+  Devices.ValueUpdate(iDeviceId, 1, sValue)
+  If $bDebug Then WriteDebugLog("Processed received DPT " & sDPT & " data for device '" & Devices.FindNameForDevice(iDeviceId) & "' value = '" & sValue & "'")
+
+End
+
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' DPT 17
+' return cmd strings for DPT 20.* values
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Private Sub ConvertDPT20(aReceived As String[], sDPT As String) As String
+
+  Dim sValue As String
+
+  Select Case sDPT
+    Case "20.102" ' HVAC Control
+      Select Case Val("&H" & aReceived[1])
+        Case 0
+          sValue = "Auto"
+        Case 1
+          sValue = "Comfort"
+        Case 2
+          sValue = "Standby"
+        Case 3
+          sValue = "Economy"
+        Case 4
+          sValue = "Building Protection"
+        Case Else
+          If $bDebug Then WriteDebugLog("Unknown data '" & aReceived[1] & "' received for DPT " & sDPT & " packet!")
+      End Select
+    Case Else
+      If $bDebug Then WriteDebugLog("Unknown DPT '" & sDPT & "' received for DPT 20.* packet!")
+      sValue = ""
+  End Select
+  Return sValue
+
+Catch
+  WriteDebugLog("ERROR: '" & Error.Text & "' at '" & Error.Where & "'!")
+
+End
+
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' process received data for DPT 232.* values, RGB
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1970,6 +2064,11 @@ Public Sub SendCommand(sAddress As String, sValue As String)
         bData = EncodeDPT9(sValue, Right(sDeviceTypeDesc, Len(sDeviceTypeDesc) - 4))
         bCommand.Add(bData[0])
         bCommand.Add(bData[1])
+        TransmitData(bCommand)
+        
+      Case "20"
+        bCommand.Add(&H80)
+        bCommand.Add(EncodeDPT20(sValue, Right(sDeviceTypeDesc, Len(sDeviceTypeDesc) - 4)))
         TransmitData(bCommand)
       
       Case Else
