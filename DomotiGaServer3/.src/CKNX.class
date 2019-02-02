@@ -742,6 +742,11 @@ Private Sub EncodeDPT20(sValue As Variant, sDPT As String) As Byte
           bData = 3
         Case "BUILDING PROTECTION"
           bData = 4
+        'To support on/off control
+        Case "ON"
+          bData = 1
+        Case "OFF"
+          bData = 2
         Case Else
           If $bDebug Then WriteDebugLog("Unknown value '" & sValue & "' set for DPT " & sDPT)
       End Select
@@ -1024,12 +1029,18 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Private Sub ProcessDPT5(iDeviceId As Integer, aReceived As String[], sDPT As String)
 
-  Dim iValue As Float
+  Dim iValue As String
 
   Select Case aReceived[0]
     Case "80", "40" ' receive/parse
       iValue = ConvertDPT5(aReceived, sDPT)
-      Devices.ValueUpdate(iDeviceId, 1, iValue)
+      
+      'if device set as dimable then add Dim to iValue
+      If Devices.FindDeviceInfoForDevice(iDeviceId)!dimable Then 
+        Devices.ValueUpdate(iDeviceId, 1, "Dim " & iValue)
+      Else
+        Devices.ValueUpdate(iDeviceId, 1, iValue)
+      Endif
       If $bDebug Then WriteDebugLog("Processed received DPT " & sDPT & " data for device '" & Devices.FindNameForDevice(iDeviceId) & "' value = '" & iValue & "'")
     Case Else
       If $bDebug Then WriteDebugLog("Unknown data '" & aReceived[0] & "' received for DPT " & sDPT & " packet!")
@@ -2061,12 +2072,15 @@ Public Sub SendCommand(sAddress As String, sValue As String)
       Case "9"
         ' DPT 9.* 2 Byte Float E Exponent(0..15)
         ' 0/1/2[|0/1/3|...] control and feedback address(es)
+        bCommand.Add(&H80)
         bData = EncodeDPT9(sValue, Right(sDeviceTypeDesc, Len(sDeviceTypeDesc) - 4))
         bCommand.Add(bData[0])
         bCommand.Add(bData[1])
         TransmitData(bCommand)
         
       Case "20"
+        ' DPT 20.* 1 Byte
+        ' 0/1/2[|0/1/3|...] control and feedback addess(es)
         bCommand.Add(&H80)
         bCommand.Add(EncodeDPT20(sValue, Right(sDeviceTypeDesc, Len(sDeviceTypeDesc) - 4)))
         TransmitData(bCommand)
