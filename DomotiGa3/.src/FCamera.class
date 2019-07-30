@@ -48,7 +48,7 @@ Private Sub DisableControls()
 
   frameIO.Hide
   ' no connection to camera, or disabled so disable control buttons
-  For Each oObject In Me.Children
+  For Each oObjectA As Object In Me.Children
     oObject.Enabled = False
   Next
   frameStream.Enabled = True
