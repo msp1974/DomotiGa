@@ -52,11 +52,11 @@ Private Sub DisableControls()
     oObject.Enabled = False
   Next
   frameStream.Enabled = True
-  For Each oObject In frameStream.Children
+  For Each oObjectA As Object In frameStream.Children
     oObject.Enabled = True
   Next
   frameCamera.Enabled = True
-  For Each oObject In frameCamera.Children
+  For Each oObjectA As Object In frameCamera.Children
     oObject.Enabled = True
   Next
 
@@ -113,16 +113,16 @@ Public Sub btnOpen_Click()
     Case "Watchbot API"
       DisableControls()
       frameDirection.Enabled = True
-      For Each oObject In frameDirection.Children
+      For Each oObjectA As Object In frameDirection.Children
         oObject.Enabled = True
       Next
       framePresets.Enabled = True
-      For Each oObject In framePresets.Children
+      For Each oObjectA As Object In framePresets.Children
         oObject.Enabled = True
       Next
       rbPresetReset.Enabled = False
       frameIO.Enabled = True
-      For Each oObject In frameIO.Children
+      For Each oObjectA As Object In frameIO.Children
         oObject.Enabled = True
       Next
       frameIO.X = 539
@@ -130,19 +130,19 @@ Public Sub btnOpen_Click()
     Case "AXIS API"
       DisableControls()
       frameDirection.Enabled = True
-      For Each oObject In frameDirection.Children
+      For Each oObjectA As Object In frameDirection.Children
         oObject.Enabled = True
       Next
       frameZoom.Enabled = True
-      For Each oObject In frameZoom.Children
+      For Each oObjectA As Object In frameZoom.Children
         oObject.Enabled = True
       Next
       frameBacklight.Enabled = True
-      For Each oObject In frameBacklight.Children
+      For Each oObjectA As Object In frameBacklight.Children
         oObject.Enabled = True
       Next
       frameSpeed.Enabled = True
-      For Each oObject In frameSpeed.Children
+      For Each oObjectA As Object In frameSpeed.Children
         oObject.Enabled = True
       Next
       slZoom.MaxValue = 9999
