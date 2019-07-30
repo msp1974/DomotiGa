@@ -859,12 +859,12 @@ Public Sub ToonGetState_Finished()
       ' },
       If cStateDeviceStatusInfo["device"] Then
         ' iterate through all plugs
-        For Each cStateDevice In cStateDeviceStatusInfo["device"]
-          sStekkerDevUuid = cStateDevice["devUUID"]
-          sStekkerState = IIf(cStateDevice["currentState"] = "1", "On", "Off")
-          fStekkerUsage = cStateDevice["currentUsage"]
-          fStekkerUsageDaily = cStateDevice["dayUsage"]
-          sStekkerNetworkHealth = cStateDevice["networkHealthState"]
+        For Each cStateDeviceA As Collection In cStateDeviceStatusInfo["device"]
+          sStekkerDevUuid = cStateDeviceA["devUUID"]
+          sStekkerState = IIf(cStateDeviceA["currentState"] = "1", "On", "Off")
+          fStekkerUsage = cStateDeviceA["currentUsage"]
+          fStekkerUsageDaily = cStateDeviceA["dayUsage"]
+          sStekkerNetworkHealth = cStateDeviceA["networkHealthState"]
           ' update stekker device
           ' value         value2        value3      value4
           ' state on/off  current usage dayusage    network health
