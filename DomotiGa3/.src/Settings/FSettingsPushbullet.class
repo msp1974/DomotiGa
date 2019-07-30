@@ -214,7 +214,7 @@ Public Sub btnFetchDevices_Click()
  
       If vResponse <> Null Then
         If vResponse.Count Then
-          For Each vDevices In vResponse
+          For Each vDevicesA As Variant In vResponse
             If vDevices["extras"]["nickname"] Then
               cmbDevice.Add(vDevices["extras"]["nickname"])
             Else
