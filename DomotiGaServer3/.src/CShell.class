@@ -78,7 +78,7 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Public Sub StopPlugin()
 
-  
+  Dim hShella As Process
   Try tShell.Stop
 
   ' Kill any running processes
