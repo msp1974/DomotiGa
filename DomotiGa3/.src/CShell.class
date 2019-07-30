@@ -38,7 +38,6 @@ Private $iPollTime As Integer
 Private $bDebug As Boolean
 
 Public tShell As Timer
-Private hShell As Process
 Private cOutput As New Collection
 Private cProcess As New Collection
 
@@ -77,6 +76,8 @@ End
 ' Mandatory sub for each Module/Class to stop
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Public Sub StopPlugin()
+
+  Dim hShell As Process
 
   Try tShell.Stop
 
