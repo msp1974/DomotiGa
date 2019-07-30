@@ -39,6 +39,7 @@ Private $bDebug As Boolean
 
 Public tShell As Timer
 Private cOutput As New Collection
+Private hShell As Process
 Private cProcess As New Collection
 
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,17 +78,16 @@ End
 '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Public Sub StopPlugin()
 
-  Dim hShell As Process
-
+  
   Try tShell.Stop
 
   ' Kill any running processes
   ' The _Kill event will ignore them
   If cProcess.Count Then
-    For Each hShell In cProcess
-      Try hShell.Kill
+    For Each hShella In cProcess
+      Try hShella.Kill
     Next
-    hShell = Null
+    hShella = Null
   Endif
 
   IsRunning = False
